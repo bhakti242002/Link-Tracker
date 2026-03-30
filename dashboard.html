@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Link Tracker Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f5f7;
+      color: #1a1a2e;
+      padding: 32px;
+    }
+
+    h1 { font-size: 1.6rem; margin-bottom: 24px; }
+
+    /* ── Shorten form ── */
+    .shorten-box {
+      background: white;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .shorten-box input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 7px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .shorten-box input:focus { border-color: #4f6ef7; }
+    .shorten-box button {
+      padding: 10px 20px;
+      background: #4f6ef7;
+      color: white;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .shorten-box button:hover { background: #3a57d4; }
+
+    .new-link-result {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #4f6ef7;
+      display: none;
+    }
+
+    /* ── Links table ── */
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead { background: #f0f2ff; }
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-weight: 600;
+      color: #555;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { padding: 12px 16px; border-top: 1px solid #f0f0f0; }
+    tr:hover td { background: #fafbff; cursor: pointer; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .badge-green  { background: #e6f9f0; color: #1a8a4a; }
+    .badge-red    { background: #fdecea; color: #c0392b; }
+    .badge-gray   { background: #f0f0f0; color: #888; }
+    .badge-blue   { background: #e8eeff; color: #4f6ef7; }
+
+    .short-url {
+      color: #4f6ef7;
+      text-decoration: none;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .original-url {
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #555;
+      font-size: 0.85rem;
+    }
+
+    /* ── Detail panel ── */
+    .detail-panel {
+      display: none;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+    .detail-panel h2 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .detail-panel h2 button {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #aaa;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-box {
+      background: #f4f5f7;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .stat-box .num {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+    .stat-box .lbl {
+      font-size: 0.78rem;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    .recent-table th { background: #f9f9f9; }
+    .mono { font-family: monospace; font-size: 0.82rem; color: #888; }
+
+    .empty { padding: 32px; text-align: center; color: #aaa; }
+    .loading { padding: 32px; text-align: center; color: #aaa; }
+  </style>
+</head>
+<body>
+
+<h1>🔗 Link Tracker</h1>
+
+<!-- Shorten form -->
+<div class="shorten-box">
+  <input id="urlInput" type="text" placeholder="Paste a URL to shorten..." />
+  <button onclick="shortenUrl()">Shorten</button>
+</div>
+<div class="new-link-result" id="newLinkResult"></div>
+
+<!-- All links table -->
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Short URL</th>
+        <th>Original URL</th>
+        <th>Unique Humans</th>
+        <th>Total Clicks</th>
+        <th>Bots</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Expires</th>
+      </tr>
+    </thead>
+    <tbody id="linksBody">
+      <tr><td colspan="7" class="loading">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Detail panel -->
+<div class="detail-panel" id="detailPanel">
+  <h2>
+    <span id="detailTitle">Click details</span>
+    <button onclick="closeDetail()">✕</button>
+  </h2>
+  <div class="stats-grid" id="statsGrid"></div>
+  <table class="recent-table">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Fingerprint</th>
+        <th>Bot?</th>
+        <th>Duplicate?</th>
+      </tr>
+    </thead>
+    <tbody id="recentBody"></tbody>
+  </table>
+</div>
+
+<script>
+  const BASE = "http://localhost:5000";
+  let allLinks = [];
+
+  // ── Load all links ────────────────────────────────────────────────────────
+  async function loadLinks() {
+    const res  = await fetch(`${BASE}/links`);
+    const data = await res.json();
+    allLinks   = data.links || [];
+
+    const tbody = document.getElementById("linksBody");
+    if (!allLinks.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty">No links yet. Shorten one above!</td></tr>`;
+      return;
+    }
+
+    // Fetch stats for each link in parallel
+    const stats = await Promise.all(allLinks.map(id =>
+      fetch(`${BASE}/stats/${id}`).then(r => r.json())
+    ));
+
+    tbody.innerHTML = stats.map(s => `
+      <tr onclick="showDetail('${s.id}')">
+        <td><a class="short-url" href="${BASE}/r/${s.id}" target="_blank">/r/${s.id}</a></td>
+        <td><div class="original-url" title="${s.original_url}">${s.original_url}</div></td>
+        <td><span class="badge badge-blue">${s.unique_humans ?? 0}</span></td>
+        <td>${s.total_clicks}</td>
+        <td>${s.bot_clicks}</td>
+        <td>
+          ${s.expired
+            ? `<span class="badge badge-red">Expired</span>`
+            : s.stale
+            ? `<span class="badge badge-red">Stale</span>`
+            : `<span class="badge badge-green">Active</span>`}
+        </td>
+        <td class="mono">${s.created_at.slice(0, 10)}</td>
+        <td class="mono">${s.expires_at.slice(0, 10)}</td>
+      </tr>
+    `).join("");
+  }
+
+  // ── Shorten a URL ─────────────────────────────────────────────────────────
+  async function shortenUrl() {
+    const url = document.getElementById("urlInput").value.trim();
+    if (!url.startsWith("http")) {
+      alert("Please enter a valid URL starting with http:// or https://");
+      return;
+    }
+    const res  = await fetch(`${BASE}/shorten`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    const resultEl = document.getElementById("newLinkResult");
+    resultEl.style.display = "block";
+    resultEl.innerHTML = `✅ Created: <a href="${data.short_url}" target="_blank">${data.short_url}</a>`;
+    document.getElementById("urlInput").value = "";
+    loadLinks();
+  }
+
+  // ── Show detail panel ─────────────────────────────────────────────────────
+  async function showDetail(id) {
+    const res  = await fetch(`${BASE}/stats/${id}`);
+    const s    = await res.json();
+
+    document.getElementById("detailTitle").textContent = `Details — /r/${id}`;
+    document.getElementById("statsGrid").innerHTML = `
+      <div class="stat-box"><div class="num">${s.unique_humans ?? 0}</div><div class="lbl">Unique Humans</div></div>
+      <div class="stat-box"><div class="num">${s.human_clicks}</div><div class="lbl">Total Human Clicks</div></div>
+      <div class="stat-box"><div class="num">${s.duplicate_clicks ?? 0}</div><div class="lbl">Duplicate Clicks</div></div>
+      <div class="stat-box"><div class="num">${s.bot_clicks}</div><div class="lbl">Bot Prefetches</div></div>
+    `;
+
+    const rows = (s.recent || []).map(c => `
+      <tr>
+        <td class="mono">${c.timestamp.slice(0, 19).replace("T", " ")}</td>
+        <td class="mono">${c.fingerprint ?? "—"}</td>
+        <td>${c.is_bot ? `<span class="badge badge-red">Yes</span>` : `<span class="badge badge-gray">No</span>`}</td>
+        <td>${c.is_duplicate ? `<span class="badge badge-red">Yes</span>` : `<span class="badge badge-green">No</span>`}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("recentBody").innerHTML = rows || `<tr><td colspan="4" class="empty">No clicks yet</td></tr>`;
+    document.getElementById("detailPanel").style.display = "block";
+    document.getElementById("detailPanel").scrollIntoView({ behavior: "smooth" });
+  }
+
+  function closeDetail() {
+    document.getElementById("detailPanel").style.display = "none";
+  }
+
+  // Enter key shortcut
+  document.getElementById("urlInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") shortenUrl();
+  });
+
+  loadLinks();
+</script>
+</body>
+</html>
